@@ -1,0 +1,133 @@
+---
+title: "Practical Machine Learning - Prediction Assignment"
+author: "neopanda"
+date: "Saturday, November 22, 2014"
+output:
+  html_document:
+    number_sections: yes
+---
+```{r echo = FALSE}
+library("knitr")
+opts_chunk$set(tidy = TRUE)
+```
+
+#Synopsis
+
+##Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+##Goal
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+#Data Processing
+
+```{r environment, results = 'hide'}
+#Environment parameters
+sessionInfo()
+
+#Set seed
+set.seed(221114)
+
+#Import library
+library(caret)
+library(randomForest)
+```
+
+##Loading data
+
+```{r data}
+#Download files if not exist
+if (!file.exists("pml-training.csv")) {
+    setInternet2(use = TRUE)
+    download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv")
+}
+if (!file.exists("pml-testing.csv")) {
+    setInternet2(use = TRUE)
+    download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "pml-testing.csv")
+}
+
+#Load data
+dataTest <- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+dataTrain <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+
+#Clean data
+NAs <- apply(dataTrain, 2, function(x) {
+    sum(is.na(x))
+})
+cleanTrain <- dataTrain[, which(NAs == 0)]
+cleanTest <- dataTest[, which(NAs == 0)]
+```
+
+##Split data for training and cross validation
+
+Split the data into training, testing and validation :
+
+* use 70% of the data as training
+* use 30% of the data as testing
+
+```{r split}
+#Split data into training and testing set
+index <- createDataPartition(y = cleanTrain$classe, p = .7, list = FALSE )
+training <- cleanTrain[index, ]
+crossValidation <- cleanTrain[-index, ]
+
+#Remove the first 7 columns because we can compare with them
+removeIndex <- as.integer(c(1, 2, 3, 4, 5, 6))
+training <- training[, -removeIndex]
+crossValidation <- crossValidation[, -removeIndex]
+testing <- cleanTest[, -removeIndex]
+```
+
+#Prediction
+
+Now we have cleaned and ordered our data, we can use it to train our model.
+
+## Training model
+
+We use the random forests prediction to train our model.
+
+```{r modelfit}
+#Random forests model
+modFit <- randomForest(classe ~ ., data = training)
+modFit
+```
+
+##Validating our prediction model
+
+We can now test if our model is correct. We analyse the confusion matrix between the validation set and our predictions.
+
+```{r validation}
+# Validation
+predictions <- predict(modFit, newdata = crossValidation)
+confusionMatrix(predictions, crossValidation$classe)
+```
+
+We have an accuracy of 99.7% which is fantastic.
+
+##Testing our model
+
+Now we are able to use our model on the testing set.
+
+```{r test}
+#Testing
+predictionTest <- predict(modFit, newdata = testing)
+```
+
+#Conclusion
+
+We can submit our answers.
+
+```{r submit}
+#Function
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+#Creating files
+pml_write_files(as.vector(predictionTest))
+```
