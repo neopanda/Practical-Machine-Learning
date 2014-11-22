@@ -11,6 +11,10 @@ library("knitr")
 opts_chunk$set(tidy = TRUE)
 ```
 
+The full repository is available at :
+
+https://github.com/neopanda/Practical-Machine-Learning/
+
 #Synopsis
 
 ##Background
@@ -93,6 +97,8 @@ modFit <- randomForest(classe ~ ., data = training)
 modFit
 ```
 
+We obtain a 0.21% error rate.
+
 ##Validating our prediction model
 
 We can now test if our model is correct. We analyse the confusion matrix between the validation set and our predictions.
@@ -103,7 +109,7 @@ predictions <- predict(modFit, newdata = crossValidation)
 confusionMatrix(predictions, crossValidation$classe)
 ```
 
-We have an accuracy of 99.7% which is fantastic.
+We have an accuracy of 99.7% which was expected.
 
 ##Testing our model
 
@@ -131,3 +137,5 @@ pml_write_files = function(x){
 #Creating files
 pml_write_files(as.vector(predictionTest))
 ```
+
+All answers are correct.
